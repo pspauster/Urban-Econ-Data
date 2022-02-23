@@ -1,0 +1,272 @@
+---
+title: "Lab-4-Spauster"
+author: "Patrick Spauster"
+date: "02/21/2022"
+output: pdf_document
+---
+```{r load libraries, include = F}
+library(tidyverse)
+library(DT)
+library(readxl)
+library(kableExtra)
+```
+
+```{r set data path, include = F}
+datapath <- ".." #Change this to where you want data saved
+```
+
+```{r load pluto, include = F}
+
+if (!file.exists(paste0(datapath, "/pluto21v4.zip"))) {
+download.file("https://www1.nyc.gov/assets/planning/download/zip/data-maps/open-data/nyc_pluto_21v4_csv.zip",
+              destfile = paste0(datapath, "/pluto21v4.zip"),
+              mode = "wb")
+}
+
+if (!file.exists(paste0(datapath, "/pluto_21v4.csv"))) {
+unzip(zipfile = paste0(datapath, "/pluto21v4.zip"),
+      exdir = datapath)
+}
+
+pluto21v4<- read_csv(paste0(datapath, "/pluto_21v4.csv"),
+                     col_types = cols(
+                       bct2020 = col_character()
+                     ))
+
+```
+
+
+```{r load tract-neighborhood crosswalk, include = F}
+
+if (!file.exists(paste0(datapath, "/xwalk_2020.xlsx"))) {
+  download.file("https://www1.nyc.gov/assets/planning/download/office/planning-level/nyc-population/census2020/nyc2020census_tract_nta_cdta_relationships.xlsx?r=092221",
+                destfile = paste0(datapath, "/xwalk_2020.xlsx"),
+                mode = "wb")
+}
+tracts_neighborhoods_2020 <- read_xlsx(paste0(datapath, "/xwalk_2020.xlsx"))
+
+```
+
+```{r clean list of tracts, include = F}
+
+xwalk_20_clean <- tracts_neighborhoods_2020 %>% 
+  transmute(
+    geoid = GEOID,
+    neighborhood = NTAName,
+    year = 2020,
+    bct2020 = BoroCT2020
+  ) %>% 
+  filter(neighborhood == "Bedford-Stuyvesant (East)") 
+
+tract_list <- pull(xwalk_20_clean, bct2020)
+```
+
+```{r filter to tract list, include = F}
+
+pluto_bse <- pluto21v4 %>% 
+  filter(bct2020 %in% tract_list)
+
+```
+
+```{r clean and summarize land use data, include = F}
+
+pluto_bse_clean <- pluto_bse %>%
+  filter(!is.na(zonedist1)) %>% 
+  mutate(landuse_char = case_when(
+    landuse == "01"~ "Residential (One & Two Family Buildings, Multi-Family Walk-Up Buildings, Multi-Family Elevator Buildings)", #res
+    landuse == "02"~ "Residential (One & Two Family Buildings, Multi-Family Walk-Up Buildings, Multi-Family Elevator Buildings)", #res
+    landuse == "03"~ "Residential (One & Two Family Buildings, Multi-Family Walk-Up Buildings, Multi-Family Elevator Buildings)", #res
+    landuse == "04"~ "Mixed Residential & Commercial Buildings",
+    landuse == "05" ~ "Commercial & Office Buildings",
+    landuse == "06"~ "Industrial & Manufacturing",
+    landuse == "07"~ "Transportation & Utility",
+    landuse == "08"~ "Public Facilities & Institutions",
+    landuse == "09"~ "Open Space & Outdoor Recreation",
+    landuse == "10"~ "Parking Facilities",
+    landuse == "11"~ "Vacant Land"
+  ),
+  zonedist = str_sub(zonedist1, end = 1),
+  area = case_when(
+    zonedist == "R" ~ resarea,
+    zonedist == "C" ~ officearea + retailarea + garagearea + strgearea + otherarea,
+    zonedist == "M" ~ factryarea
+  ),
+  full_zonedist = case_when(
+    zonedist == "R" ~ "Residential",
+    zonedist == "C" ~ "Commercial",
+    zonedist == "M" ~ "Manufacturing",
+    T ~ "Other"
+  ),
+  area_used = bldgarea,
+  area_allowed = case_when(
+    zonedist == "R" & is.na(spdist1) ~ residfar * lotarea,
+    zonedist == "C" & is.na(spdist1) ~ commfar * lotarea,
+    zonedist %in% c("R", "C", "M") & !is.na(spdist1) ~ pmax(residfar, commfar) * lotarea,
+    zonedist == "M" & is.na(spdist1) ~ commfar * lotarea,
+    T ~ commfar * lotarea
+  ),
+  unutilized_far = area_allowed - area_used,
+  utilized_far = area_used,
+  unutilized_flag = if_else(unutilized_far <= 0, "Utilized", "Unutilized"),
+  total_unutilized_far = sum(unutilized_far, na.rm = T),
+  total_utilized_far = sum(utilized_far, na.rm = T),
+  total_max_floor_area_allowed = sum(area_allowed, na.rm = T),
+  total_lots = n(),
+  total_lot_area = sum(lotarea, na.rm = T),
+  total_bldg_area = sum(bldgarea, na.rm = T)) 
+
+```
+
+```{r create tables, include=FALSE}
+table1 <- pluto_bse_clean %>% 
+  ungroup() %>% 
+  group_by(zonedist1) %>% 
+  summarise(`Number of Lots` = n(),
+            `Percentage of Total Lots (%)` = (n()/mean(total_lots)),
+            `Lot Area (sf)` = (sum(lotarea, na.rm = T)),
+            `Total Percentage of Lot Area (%)` = (sum(lotarea, na.rm = T)/mean(total_lot_area, na.rm = T)),
+            `Building Floor Area (sf)` = (sum(bldgarea, na.rm = T)),
+            `Total Percentage of Building Floor Area (%)` = (sum(bldgarea, na.rm = T)/mean(total_bldg_area, na.rm = T)),
+            ) %>% 
+  arrange(desc(`Number of Lots`)) %>% 
+  bind_rows(summarise(.,
+                      across(where(is.numeric), sum),
+                      across(where(is.character), ~"Total"))) %>% 
+  mutate(`Number of Lots` = scales::comma(`Number of Lots`),
+          `Percentage of Total Lots (%)` = scales::percent(`Percentage of Total Lots (%)`, accuracy = .01L),
+          `Lot Area (sf)` = scales::comma(`Lot Area (sf)`),
+          `Total Percentage of Lot Area (%)` = scales::percent(`Total Percentage of Lot Area (%)`),
+          `Building Floor Area (sf)` = scales::comma(`Building Floor Area (sf)`),
+          `Total Percentage of Building Floor Area (%)` = scales::percent(`Total Percentage of Building Floor Area (%)`, accuracy = .01L)
+         )
+  
+
+table2 <- pluto_bse_clean %>% 
+  ungroup() %>% 
+  group_by(zonedist1) %>% 
+  summarise(`Total Unutilzed FAR (sqft)` = sum(unutilized_far, na.rm = T),
+            `Share of Unutilized FAR (%)` = (sum(unutilized_far, na.rm = T)/mean(total_unutilized_far, na.rm = T)),
+            `Total Utilized FAR (sqft)` = sum(utilized_far, na.rm = T),
+            `Share of Utilized FAR (%)` = (sum(utilized_far, na.rm = T)/mean(total_utilized_far, na.rm = T)),
+            `Total Max Floor Area Allowed (sqft)` = sum(area_allowed, na.rm = T),
+            `Share Max Floor Area Allowed (%)`= (sum(area_allowed, na.rm = T)/mean(total_max_floor_area_allowed, na.rm = T)),
+            ) %>% 
+  arrange(desc(`zonedist1`)) %>% 
+  bind_rows(summarise(.,
+                      across(where(is.numeric), sum),
+                      across(where(is.character), ~"Total"))) %>% 
+  mutate(`Total Unutilzed FAR (sqft)` = scales::comma(`Total Unutilzed FAR (sqft)`),
+          `Share of Unutilized FAR (%)` = scales::percent(`Share of Unutilized FAR (%)`, accuracy = .01L),
+          `Total Utilized FAR (sqft)` = scales::comma(`Total Utilized FAR (sqft)`),
+          `Share of Utilized FAR (%)` = scales::percent(`Share of Utilized FAR (%)`),
+          `Total Max Floor Area Allowed (sqft)` = scales::comma(`Total Max Floor Area Allowed (sqft)`),
+          `Share Max Floor Area Allowed (%)` = scales::percent(`Share Max Floor Area Allowed (%)`, accuracy = .01L)
+         )
+
+land_use <- pluto_bse_clean %>% 
+  ungroup() %>% 
+  group_by(zonedist1, full_zonedist, .drop = F) %>% 
+  mutate(z_total_lots = n()) %>% 
+  summarize(`Count of Lots` = n(),
+            `Share of Lots` = n()/mean(z_total_lots),
+            .groups = "keep") %>% 
+  pivot_wider(names_from = "zonedist1", values_from = c("Count of Lots", "Share of Lots")) %>% 
+  ungroup() %>% 
+  mutate_if(is.integer, ~replace(., is.na(.), 0)) %>% 
+  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
+  bind_rows(summarise(.,
+                      across(where(is.numeric), sum),
+                      across(where(is.character), ~"Total"))) %>% 
+  rename(`Zoning Code` = full_zonedist)
+
+utilization <- pluto_bse_clean %>% 
+  ungroup() %>% 
+  group_by(zonedist1) %>% 
+  mutate(z_total_lots = n()) %>% 
+  ungroup() %>% 
+  group_by(zonedist1, unutilized_flag, .drop = F) %>% 
+  summarize(`Count of Lots` = n(),
+            `Share of Lots` = n()/mean(z_total_lots),
+            .groups = "keep") %>% 
+  pivot_wider(names_from = "zonedist1", values_from = c("Count of Lots", "Share of Lots")) %>% 
+  mutate_if(is.integer, ~replace(., is.na(.), 0)) %>% 
+  mutate_if(is.numeric, ~replace(., is.na(.), 0)) %>% 
+  rename(`Zoning Code` = unutilized_flag )%>% 
+  bind_rows(land_use, .) 
+
+writexl::write_xlsx(utilization, "lab4table.xlsx")
+
+```
+
+# Land Use Compliance Table
+
+Q1: Is what is there in reality consistent with what is zoned on paper? How does this difference tell you about the neighborhood? To answer this question, please produce a compliance table like below and analyze the zoning compliance and utilization in your neighborhood.
+
+Yes, the reality is mostly consistent with what's zoned on paper, though these tables can quite deceptive. Particularly in residential zones, which make up the large majority of lots in the neighborhood, lots are underbuilt according to the maximum allowable FAR. However, there are very few vacant properties, and many of the "underbuilt" properties are actually quite close, but just shy, of using the maximum allowable FAR. These lots are categorized as "unutilized" despite using most of the lot, and are not candidates for redevelopment because they are use most of the available floor area.
+
+In addition to that, all of these zones have consistent land use, with manufacturing lots in manufacturing districts, commercial in commercial, and residential in residential.
+
+
+```{r knit tables, echo = F}
+
+table1 <- utilization  %>% 
+  select(`Zoning Code`,`Count of Lots_C4-3`, `Share of Lots_C4-3`,
+         `Count of Lots_C4-4L`, `Share of Lots_C4-4L`,
+         `Count of Lots_C4-5D`, `Share of Lots_C4-5D`,
+         `Count of Lots_M1-1/R7D`, `Share of Lots_M1-1/R7D`,
+         `Count of Lots_PARK`, `Share of Lots_PARK`,
+        ) %>% 
+  mutate(across(starts_with("Count"), ~scales::comma(.)),
+            across(starts_with("Share"), ~scales::percent(.))) %>% 
+  knitr::kable(caption = "Land Use Compliance Table",
+                    # col.names = c("",
+                    #              "Number of Lots        ",
+                    #             "Percentage of Total Lots (%)",
+                    #             "Lot Area (sf)                ",
+                    #             "Total Percentage of Lot Area (%)",
+                    #             "Building Floor Area (sf)",
+                    #             "Total Percentage of Building Floor Area (%)"
+                    #             ),
+               format = "latex"
+                    #full_width = T,
+                    )          %>% 
+                  kable_styling(latex_options = c("scale_down", "HOLD_position"))
+
+table1
+```
+
+```{r knit tables2, echo = F}
+utilization  %>% 
+  select(`Zoning Code`,`Count of Lots_R5`, `Share of Lots_R5`,
+         `Count of Lots_R5B`, `Share of Lots_R5B`,
+         `Count of Lots_R6`, `Share of Lots_R6`,
+         `Count of Lots_R6A`, `Share of Lots_R6A`,
+         `Count of Lots_R6B`, `Share of Lots_R6B`,
+         `Count of Lots_R7D`, `Share of Lots_R7D`,
+        ) %>% 
+    mutate(across(starts_with("Count"), ~scales::comma(.)),
+            across(starts_with("Share"), ~scales::percent(.))) %>% 
+  knitr::kable(caption = "Land Use Compliance Table, Cnt.",
+                    # col.names = c("",
+                    #              "Number of Lots        ",
+                    #             "Percentage of Total Lots (%)",
+                    #             "Lot Area (sf)                ",
+                    #             "Total Percentage of Lot Area (%)",
+                    #             "Building Floor Area (sf)",
+                    #             "Total Percentage of Building Floor Area (%)"
+                    #             ),
+               format = "latex"
+                    #full_width = T,
+                    )          %>% 
+                  kable_styling(latex_options = c("scale_down", "HOLD_position"))
+```
+
+
+
+
+
+
+
+  
+  
+  

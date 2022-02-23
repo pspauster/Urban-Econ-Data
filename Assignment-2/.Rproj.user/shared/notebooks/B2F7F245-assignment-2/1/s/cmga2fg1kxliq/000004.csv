@@ -1,0 +1,19 @@
+"0",""
+"0","towndata <- read_excel(""Urban Econ 2022 Assignment 2 Data.xlsx"", skip = 5, col_names = F)"
+"2","New names:
+* `` -> ...1
+* `` -> ...2
+* `` -> ...3
+* `` -> ...4
+* `` -> ...5
+* ...
+"
+"0","colnames(towndata) <- c(""city"",""land_area"",""distance_cbd"","
+"0","                    ""pop_1970"", ""pop_1990"", ""pop_2000"", ""pop_2010"",""pop_2019"","
+"0","                    ""income_1990"", ""income_2000"", ""income_2010"", ""income_2019"","
+"0","                    ""poverty_2019"")"
+"0",""
+"0","towndata_clean <- towndata %>% "
+"0","  mutate(pop_dens_2019 = pop_2019/land_area) %>% "
+"0","  head(144)"
+"0",""

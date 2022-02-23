@@ -1,0 +1,239 @@
+---
+title: 'Assignment #2'
+author: "Patrick Spauster"
+date: "2/22/2022"
+output: pdf_document
+---
+
+```{r load libraries, include = F}
+library(tidyverse)
+library(DT)
+library(readxl)
+library(kableExtra)
+library(sf)
+```
+
+# Short Questions  
+ 
+1.	In a 2015 report, an economic consulting firm estimated the economic impacts of constructing a new football stadium in Los Angeles.  The authors predicted that if LA receives one NFL team, then the stadium investment would result in $281 million per year in direct spending related to the team (team and stadium operations, player salaries etc).  The consulting firm then estimates a total of $507 million per year in total economic impact. What implicit assumptions might they have made in their analysis?  Provide a brief assessment of the plausibility of their multiplier.    
+ 
+ 
+ 
+2.	The residents of mobile home parks own their dwellings and rent land from absentee landowners.  Consider a city in which all land is currently occupied by mobile home parks.  Suppose the city government imposes a 50% tax on land, to be paid (in legal terms) by the person who occupies the land (the tenant).  Who actually pays the tax? 
+ 
+ 
+ 
+3.	How would you expect the division of land between office firms and manufacturing firms – and their relative locations – to change if per unit freight costs decline (that is, it becomes cheaper to ship manufacturing goods)?  Use a single bid-rent diagram to illustrate your answer. 
+ 	 
+ 	 
+ 	 
+4.	Suppose a city restricts the heights of residential structures. The maximum height is four stories, the height that would normally occur at a distance of five miles from the city center. Draw two residential bid-rent curves on the same graph, one for the city in the absence of height restrictions and one with height restrictions. 
+ 
+ 
+#	Analysis of Suburbanization in Boston 
+ 
+This exercise requires you to examine suburbanization patterns in the Boston metropolitan area.  Using real world data, you will study how the density of population and median household income and poverty rates in Boston area towns change as one moves away from the Boston central business district (CBD) and to examine how these patterns changed between 1970 and 2019 for population and between 1990 and 2019 for income.  The required data is posted on Brightspace in an EXCEL file.  The data set includes the population for municipalities in the Boston metropolitan area in 1970, 1990, 2000, 2010, and 2019, median household income for 1990, 2000, 2010, and 2019, poverty rates for 2019, as well as their land area and distance to the CBD.   
+ 
+## Calculate the population density for each town in 2019, and plot these densities against distance from the central business district (CBD).  Also plot 2019 median income and 2019 poverty rate against distance from the central business district. 
+
+```{r read excel data, include=F}
+
+towndata <- read_excel("Urban Econ 2022 Assignment 2 Data.xlsx", skip = 5, col_names = F)
+
+colnames(towndata) <- c("city","land_area","distance_cbd",
+                    "pop_1970", "pop_1990", "pop_2000", "pop_2010","pop_2019",
+                    "income_1990", "income_2000", "income_2010", "income_2019",
+                    "poverty_2019")
+
+towndata_clean <- towndata %>% 
+  mutate(pop_dens_2019 = pop_2019/land_area) %>% 
+  head(144)
+
+```
+
+ 
+Specifically, use EXCEL to create three different XY scatterplot graphs (using the Excel ‘Chart Wizard’).  Distance to Boston (the CBD) should be on the x-axis and the density measure (or income/poverty rate) should be on the y-axis:  
+ 
+	 	Population density in 2019 
+	 	Median income in 2019  
+	 	Poverty rate in 2019 
+ 
+Note that density is defined simply as (population/land area).   
+ 
+EXCEL HELP:  To create a scatterplot in Excel, the density data must be immediately to the right of the “distance from CBD” column.   First create new columns and calculate four density measures for each town in the Boston metropolitan area.  Then, you can add two columns for the distance data – one immediately to the left of each density column.  Then highlight the data included in a single pair of distance-density columns and click on the Excel Chart Wizard.  Choose the custom-type  scatter-plot. 
+ 
+At the bottom of the assignment, I have included a sample graph for population in 1970 in the Boston metro area to give you an idea of what the end product should look like. 
+
+```{r pop dens graph,echo = F}
+
+towndata_clean %>% 
+  ggplot(mapping = aes(x = distance_cbd, y = pop_dens_2019))+
+  geom_point() +
+  scale_x_continuous(expand = expand_scale(mult = c(0.002, 0)), 
+                     limits = c(0, 60),
+                     breaks = 1:6 *10
+                     ) +
+  scale_y_continuous(expand = expand_scale(mult = c(0, 0.002)), 
+                     limits = c(0, 20000),
+                     breaks = 1:8 * 5000
+                     ) +
+  labs(x = "Distance to City center (mile)",
+       y = "Population density (People/square mile)",
+       title = "Distance to the City Center in Massachusetts Cities and Population Density, 2019")
+
+
+
+```
+```{r med income,echo = F}
+
+towndata_clean %>% 
+  ggplot(mapping = aes(x = distance_cbd, y = income_2019))+
+  geom_point() +
+  scale_x_continuous(expand = expand_scale(mult = c(0.002, 0)), 
+                     limits = c(0, 60),
+                     breaks = 1:6 *10
+                     ) +
+  scale_y_continuous(expand = expand_scale(mult = c(0, 0.002)), 
+                     limits = c(0, 260000),
+                     breaks = 1:8 * 50000
+                     ) +
+  labs(x = "Distance to City center (mile)",
+       y = "Median Income",
+       title = "Distance to the City Center in Massachusetts Cities and Median Income, 2019")
+
+```
+ 
+
+```{r med income,echo = F}
+
+towndata_clean %>% 
+  ggplot(mapping = aes(x = distance_cbd, y = poverty_2019))+
+  geom_point() +
+  scale_x_continuous(expand = expand_scale(mult = c(0.002, 0)), 
+                     limits = c(0, 60),
+                     breaks = 1:6 *10
+                     ) +
+  scale_y_continuous(expand = expand_scale(mult = c(0, 0.002)), 
+                     limits = c(0, .25),
+                     breaks = 1:8 * .05,
+                     labels = scales::percent
+                     ) +
+  labs(x = "Distance to City Center (mile)",
+       y = "Poverty Rate",
+       title = "Distance to the City Center in Massachusetts Cities and Poverty Rate, 2019")
+
+```
+
+
+## After producing these graphs, please answer the following questions:
+
+1. Do the graphs generally appear consistent with the predictions of location theory, or the traditional urban model?  Why or why not?  (Again, take Boston to be the CBD.) 
+ 
+2. Why should population density be higher nearer to the CBD? 
+ 
+3. Are there any notable outliers to population density?  What might explain them?   
+ 
+4. What might explain the shape of the income and poverty rate gradients? 
+ 
+Population
+
+5. How many people lived in towns within 15 miles of Boston in 1970, 1990, 2000, and 2019?   
+ 	 
+6. How many people lived in towns more than 15 miles away from Boston during these four years?  (Creating a table like the one below may help.) 
+
+```{r}
+
+close_sum <- towndata_clean %>% 
+  mutate(`Distance to Boston` = if_else(distance_cbd <=15, "< 15 Miles", "> 15 Miles")) %>% 
+  group_by(`Distance to Boston`) %>% 
+  summarize(`Population 1970` = sum(pop_1970),
+            `Population 1990` = sum(pop_1990),
+            `Population 2000` = sum(pop_2000),
+            `Population 2019` = sum(pop_2019),
+            ) 
+
+close_sum %>% 
+  kable()
+
+```
+
+7. What was the percentage change in the population living within 15 miles of Boston during 1970-1990 and from 1990-2019?  
+
+1970-1990: `r scales::percent((close_sum[[1,3]]-close_sum[[1,2]])/close_sum[[1,2]])`
+1990-2019: `r scales::percent((close_sum[[1,4]]-close_sum[[1,3]])/close_sum[[1,3]])`
+ 	 
+8. What was the percentage growth in the population living more than 15 miles away from Boston during these two time periods? 
+
+1970-1990: `r scales::percent((close_sum[[2,3]]-close_sum[[2,2]])/close_sum[[2,2]])`
+1990-2019: `r scales::percent((close_sum[[2,4]]-close_sum[[2,3]])/close_sum[[2,3]])`
+ 
+9. What can you say about suburbanization in Boston during these two time periods?  How do changes between 1970 and 1990 compare to the changes that occurred between 1990 and 2019?  Is the pace of suburbanization similar during each time period?  
+ 	 
+
+ 
+Income 
+ 
+10. What was the average change in median income less than 5 miles away from Boston, between 5-10 miles away, between 10-15 miles away, and beyond 15 miles between 1990-2000 and between 2010-2019? (In calculating averages, you do not need to weight by population.)  Note that you need to calculate the percentage change in median income for each town, and then average those percentages within the distance band. 
+
+```{r}
+inc_sum <- towndata_clean %>% 
+  mutate(`Distance to Boston` = factor(case_when(
+    distance_cbd <=5 ~ "less than 5 miles",
+    distance_cbd <=10 & distance_cbd >5 ~ "5-10 miles",
+    distance_cbd <=15 & distance_cbd >10 ~ "10-15 miles",
+    distance_cbd >15 ~ "beyond 15 miles",
+    ),
+    levels = c("less than 5 miles", "5-10 miles","10-15 miles","beyond 15 miles")),
+    pct_change_inc_90_00 = (income_2000-income_1990)/income_1990,
+    pct_change_inc_10_19 = (income_2019-income_2010)/income_2010,
+    ) %>% 
+  group_by(`Distance to Boston`) %>% 
+  summarize(`Average Change in Median Income 1990-2000` = scales::percent(mean(pct_change_inc_90_00)),
+            `Average Change in Median Income 2010-2019` = scales::percent(mean(pct_change_inc_10_19)),
+            ) 
+
+inc_sum %>% 
+  kable()
+
+
+```
+
+ 	 
+11. What can you say generally about the geography of median income changes in Boston during these two time periods?  How do changes between 1990 and 2000 compare to the changes that occurred between 2010 and 2019?  How would you explain these differences?  
+ 
+ 
+ 
+All Cities in Boston Metro Area 1970 Population Density
+ 
+ 
+ 
+12) REQUIRED FOR URBAN PLANNING STUDENTS:   
+ 
+Using the .shp files posted on NYU Classes, create three maps using GIS: 1) percent growth in population from 1970-2019, 2) 2019 median income, and 3) 2019 poverty rate, for all the jurisdictions in the Boston Metro Area.  Do the maps tell you anything that the numbers and graphs did not? 
+ 
+Note: Don’t worry if there are 2-3 missing geographies in the output map.  
+
+```{r}
+
+boston <- st_read("Boston_MSA_FINAL.shp", layer = "SHAPEFILE") # i think these are corrupted
+
+towns <- st_read("TOWNS_POLY.shp") #can't read in R or arc
+
+
+```
+
+
+
+
+Additional Guidance -- QGIS Data Join  
+1.	Download the csv file named 'ue-assign2-qgis-data.csv' 
+2.	Create a new column and add in your calculation for percent change (feel free to export your csv to excel if you prefer, but make sure to convert back to csv) 
+3.	In QGIS, select the icon for 'add layer', then select 'delimited text', and upload the csv  
+4.	Right click on your Boston MSA Towns shapefile and select 'properties' 
+5.	Click the option to join the data from the left panel (see image) 
+6.	Click the green plus sign on the bottom of the popup  7. Select the data you want to join the shapefile with (in this case, it will be 'ue-assign2qgis-data' unless you renamed it) 
+8. Select TOWN for the column you want to use in both datasets to join them  9. Press OK, then 'apply', then OK again.  
+10. Right click on your 
+Boston MSA Towns shapefile again and select 'Attribute Table' to confirm that the 
+columns you need were added 
+

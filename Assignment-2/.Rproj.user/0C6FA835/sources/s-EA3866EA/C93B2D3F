@@ -1,0 +1,32 @@
+{
+    "id": "C93B2D3F",
+    "path": null,
+    "project_path": null,
+    "type": "r_dataframe",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1645579994296.0,
+    "source_on_save": false,
+    "relative_order": 4,
+    "properties": {
+        "expression": "towndata_clean",
+        "caption": "towndata_clean",
+        "totalObservations": "145",
+        "displayedObservations": "145",
+        "variables": "14",
+        "cacheKey": "5600357C",
+        "object": "towndata_clean",
+        "environment": "",
+        "contentUrl": "grid_resource/gridviewer.html?env=&obj=towndata_clean&cache_key=5600357C&max_cols=50",
+        "preview": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1645579990,
+    "encoding": "",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1645579994296,
+    "read_only": false,
+    "read_only_alternatives": []
+}
