@@ -12,6 +12,6 @@
 "0","                     ) +"
 "0","  labs(x = ""Distance to City center (mile)"","
 "0","       y = ""Population density (People/square mile)"","
-"0","       title = ""Distance to the City Center in Massachusetts Cities and Population Density"")"
+"0","       title = ""Distance to the City Center in Massachusetts Cities and Population Density, 2019"")"
 "2","`expand_scale()` is deprecated; use `expansion()` instead."
 "2","`expand_scale()` is deprecated; use `expansion()` instead."

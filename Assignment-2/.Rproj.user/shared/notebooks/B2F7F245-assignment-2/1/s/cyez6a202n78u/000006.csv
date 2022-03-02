@@ -1,0 +1,9 @@
+"0","boston_clean <- boston %>%
+  left_join(city_data %>% select(City, `2019 Population`, `2019 Income`), by = c(""TOWN"" = ""City"")) %>% 
+  left_join(town_data %>% select(city, poverty_2019), by = c(""TOWN"" = ""city"")) %>% 
+  mutate(per_growth_70_19 = (`2019 Population` - POP1970)/POP1970,
+         median_income_19 = `2019 Income`,
+         pov_rate_2019 = poverty_2019)
+"
+"2","Error in select(., city, poverty_2019) : object 'town_data' not found
+"

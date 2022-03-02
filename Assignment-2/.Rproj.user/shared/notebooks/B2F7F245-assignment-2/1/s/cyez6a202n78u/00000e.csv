@@ -1,5 +1,0 @@
-"0","boston <- st_read(""Boston_MSA_FINAL.shp"", layer = ""SHAPEFILE"")
-"
-"2","GDAL Error 4: Unable to open C:\Users\patri\Documents\Wagner\Urban Econ\Data\Assignment-2\Boston_MSA_FINAL.shx or C:\Users\patri\Documents\Wagner\Urban Econ\Data\Assignment-2\Boston_MSA_FINAL.SHX. Set SHAPE_RESTORE_SHX config option to YES to restore or create it."
-"2","Error: Cannot open ""C:\Users\patri\Documents\Wagner\Urban Econ\Data\Assignment-2\Boston_MSA_FINAL.shp""; The source could be corrupt or not supported. See `st_drivers()` for a list of supported formats.
-"
